@@ -64,7 +64,7 @@ public class RedmineConfig extends AbstractDescribableImpl<RedmineConfig> {
         }
 
         public FormValidation doValidate(@QueryParameter String url, @QueryParameter String apiKey) {
-            RedmineManager redmineManager = getRedmineManagerInstance();
+            RedmineManager redmineManager = new RedmineManager(url, apiKey);
             try {
                 List<Project> projects = redmineManager.getProjects();
             } catch (RedmineException e) {
