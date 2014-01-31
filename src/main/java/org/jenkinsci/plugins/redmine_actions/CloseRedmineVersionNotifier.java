@@ -167,7 +167,7 @@ public class CloseRedmineVersionNotifier extends Notifier {
 
     /**
      * Attempt to conform an unknown date time string to the ISO8601 format, as used in
-     * Redmine `date` custom fields. Only accept the `YYYY-MM-DD` sub-format of ISO8601.
+     * Redmine `date` custom fields. Only accept the `yyyy-MM-dd` sub-format of ISO8601.
      *
      * @param dateTime The date time format to conform
      * @return String The correctly formatted date, or null if it doesn't conform
@@ -178,7 +178,7 @@ public class CloseRedmineVersionNotifier extends Notifier {
         if (dateToConform.length() > 10)
             dateToConform = dateToConform.substring(0, 10);
         try {
-            Date date = new SimpleDateFormat("YYYY-MM-DD", Locale.ENGLISH).parse(dateToConform);
+            Date date = new SimpleDateFormat("yyyy-MM-dd", Locale.ENGLISH).parse(dateToConform);
         } catch (ParseException e) {
             return null;
         }
