@@ -3,6 +3,7 @@ import com.taskadapter.redmineapi.RedmineException;
 import com.taskadapter.redmineapi.RedmineManager;
 import com.taskadapter.redmineapi.bean.*;
 import hudson.*;
+import hudson.model.Result;
 import hudson.tasks.*;
 import hudson.util.FormValidation;
 import hudson.model.AbstractBuild;
@@ -212,57 +213,60 @@ public class CloseRedmineVersionNotifier extends Notifier {
      */
     private void action(AbstractBuild build, Launcher launcher, BuildListener listener)
             throws RedmineException, AbortException, InterruptedException, IOException {
-        RedmineManager mgr = getRedmineManager();
-        writeLineToLog("Current User: %s", mgr.getCurrentUser().toString());
-        try {
-            // Expand any environment variables within the version name string
-            EnvVars envs = build.getEnvironment(listener);
-            // Format the version name and look it up in Redmine
-            String versionName = String.format(envs.expand(versionNameFormat), build.number);
-            Version currentVersion = findVersionByName(versionName);
+        if (build.getResult() == Result.SUCCESS) {
+            RedmineManager mgr = getRedmineManager();
+            writeLineToLog("Current User: %s", mgr.getCurrentUser().toString());
+            try {
+                // Expand any environment variables within the version name string
+                EnvVars envs = build.getEnvironment(listener);
+                // Format the version name and look it up in Redmine
+                String versionName = String.format(envs.expand(versionNameFormat), build.number);
+                Version currentVersion = findVersionByName(versionName);
 
-            // Check that the current version actually exists
-            if (currentVersion != null) {
+                // Check that the current version actually exists
+                if (currentVersion != null) {
 
-                // Modify the issues statuses associated to the version - but only if the version is still open
-                if (modifyTicketIssueStatusId != -1 && currentVersion.getStatus().equals("open")) {
-                    List<Issue> versionedIssues = findIssuesByVersion(currentVersion.getId());
-                    if (versionedIssues.size() > 0) {
-                        writeLineToLog("Found %d issues in \"%s\"", versionedIssues.size(), versionName);
+                    // Modify the issues statuses associated to the version - but only if the version is still open
+                    if (modifyTicketIssueStatusId != -1 && currentVersion.getStatus().equals("open")) {
+                        List<Issue> versionedIssues = findIssuesByVersion(currentVersion.getId());
+                        if (versionedIssues.size() > 0) {
+                            writeLineToLog("Found %d issues in \"%s\"", versionedIssues.size(), versionName);
 
-                        // Close each of the issues
-                        for (Issue i : versionedIssues) {
-                            i.setStatusId(modifyTicketIssueStatusId);
-                            mgr.update(i);
-                        }
-                    } else
-                        writeLineToLog("No issues found in \"%s\"", versionName);
-                }
+                            // Close each of the issues
+                            for (Issue i : versionedIssues) {
+                                i.setStatusId(modifyTicketIssueStatusId);
+                                mgr.update(i);
+                            }
+                        } else
+                            writeLineToLog("No issues found in \"%s\"", versionName);
+                    }
 
-                // Close the version and update its description
-                currentVersion.setStatus("closed");
-                if (updateDescription) {
-                    String desc = currentVersion.getDescription();
-                    // Check for a description header
-                    if (!desc.startsWith("Jenkins job:"))
-                        desc = "Jenkins job \"" + build.getProject().getDisplayName() + "\" builds: ";
-                    else
-                        desc += " // ";
-                    // Append the build date/number onto the description
-                    desc += String.format("#%d at %s", build.getNumber(), build.getTime().toString());
-                    currentVersion.setDescription(desc);
-                    writeLineToLog("Version \"%s\" set to closed and description updated", versionName);
-                }
+                    // Close the version and update its description
+                    currentVersion.setStatus("closed");
+                    if (updateDescription) {
+                        String desc = currentVersion.getDescription();
+                        // Check for a description header
+                        if (!desc.startsWith("Jenkins job"))
+                            desc = "Jenkins job \"" + build.getProject().getDisplayName() + "\" builds: ";
+                        else
+                            desc += " // ";
+                        // Append the build date/number onto the description
+                        desc += String.format("#%d at %s", build.getNumber(), build.getTime().toString());
+                        currentVersion.setDescription(desc);
+                        writeLineToLog("Version \"%s\" set to closed and description updated", versionName);
+                    }
 
-                if (setCustomFields)
-                    updateCustomFieldsFromString(currentVersion.getCustomFields(), customFieldsToSet, envs);
+                    if (setCustomFields)
+                        updateCustomFieldsFromString(currentVersion.getCustomFields(), customFieldsToSet, envs);
 
-                mgr.update(currentVersion);
-            } else
-                writeLineToLog("No version found for \"%s\"", versionName);
-        } catch (IllegalFormatException e) {
-            throw new AbortException("Version Format is invalid: " + e.getMessage());
-        }
+                    mgr.update(currentVersion);
+                } else
+                    writeLineToLog("No version found for \"%s\"", versionName);
+            } catch (IllegalFormatException e) {
+                throw new AbortException("Version Format is invalid: " + e.getMessage());
+            }
+        } else
+            writeLineToLog("Not updating version as the build was not a success");
     }
 
     @Override

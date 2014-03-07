@@ -7,7 +7,7 @@
     </parent>
 
     <artifactId>redmine-actions</artifactId>
-    <version>0.1-SNAPSHOT</version>
+    <version>0.1.1-SNAPSHOT</version>
     <packaging>hpi</packaging>
     <name>Redmine actions plugin</name>
     <description>Perform tasks on Redmine as build steps.</description>
